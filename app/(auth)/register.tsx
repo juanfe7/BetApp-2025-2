@@ -1,8 +1,44 @@
+import { AuthContext } from '@/contexts/AuthContext';
 import { useRouter } from 'expo-router';
+import React, { useContext, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function Register() {
   const router = useRouter();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+
+  // Usamos el hook useContext para acceder a las propiedades del AuthContext
+  const { register, isLoading } = useContext(AuthContext);
+
+  const handleRegister = async () => {
+    // Validar que las contraseñas coincidan
+    if (password !== confirmPassword) {
+      setErrorMessage('Passwords do not match.');
+      return;
+    }
+
+    try {
+      // Intentar registrar al usuario
+      setErrorMessage('');
+      await register(email, password);
+      // Si el registro es exitoso, Supabase se encargará de gestionar la sesión
+      // y AuthContext actualizará el estado global.
+      // Puedes redirigir al usuario si es necesario.
+      console.log("Registration successful! User logged in automatically.");
+      router.push('/'); // Redirigir al home o a una pantalla de inicio
+    } catch (error) {
+      // Capturar cualquier error del proceso de registro (por ejemplo, email ya en uso)
+      if (error instanceof Error) {
+        setErrorMessage(error.message);
+      } else {
+        setErrorMessage('An unexpected error occurred.');
+      }
+    }
+  };
+
   return (
     <View style={styles.container}>
 
@@ -21,18 +57,12 @@ export default function Register() {
       {/* Campos de registro */}
       <TextInput
         style={styles.input}
-        placeholder="Username"
-        placeholderTextColor="#888"
-        autoCapitalize="none"
-        autoCorrect={false}
-      />
-
-      <TextInput
-        style={styles.input}
         placeholder="Email"
         placeholderTextColor="#888"
         autoCapitalize="none"
         keyboardType="email-address"
+        value={email}
+        onChangeText={setEmail}
       />
 
       <TextInput
@@ -40,6 +70,8 @@ export default function Register() {
         placeholder="Password"
         placeholderTextColor="#888"
         secureTextEntry={true}
+        value={password}
+        onChangeText={setPassword}
       />
 
       <TextInput
@@ -47,14 +79,26 @@ export default function Register() {
         placeholder="Confirm Password"
         placeholderTextColor="#888"
         secureTextEntry={true}
+        value={confirmPassword}
+        onChangeText={setConfirmPassword}
       />
 
+      {/* Mensaje de error */}
+      {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
+
       {/* Botón registrar */}
-      <TouchableOpacity style={styles.button} onPress={() => console.log('Register pressed')}>
-        <Text style={styles.buttonText}>SIGN UP</Text>
+      <TouchableOpacity
+        style={styles.button}
+        onPress={handleRegister}
+        disabled={isLoading} // Desactivar el botón mientras se procesa la solicitud
+      >
+        {/* Mostrar "Loading..." si está en proceso */}
+        <Text style={styles.buttonText}>
+          {isLoading ? 'Loading...' : 'SIGN UP'}
+        </Text>
       </TouchableOpacity>
 
-      {/* Volver a login */}  
+      {/* Volver a login */}
       <Pressable onPress={() => router.push('/(auth)/login')}>
         <Text style={{ color: '#0072f5ff', marginTop: 20, textDecorationLine: 'underline' }}>
           Already have an account?
@@ -107,6 +151,11 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#fff',
     fontSize: 16,
+  },
+  errorText: {
+    color: 'red',
+    marginTop: 10,
+    textAlign: 'center',
   },
   logo: {
     width: 120,

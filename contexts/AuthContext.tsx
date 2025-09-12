@@ -1,4 +1,5 @@
-import { createContext, ReactNode, useState } from 'react';
+import { supabase } from "@/utils/supabase"; // importa tu cliente
+import { createContext, ReactNode, useEffect, useState } from "react";
 
 interface AuthContextProps {
   user: any;
@@ -8,61 +9,65 @@ interface AuthContextProps {
   register: (email: string, password: string) => Promise<void>;
 }
 
-const fakeDataSource = [
-  {
-    email: "test@test.com",
-    password: "12345678",
-    name: "TEST"
-  },
-  {
-    email: "test1@test.com",
-    password: "12345678",
-    name: "TEST1"
-  },
-  {
-    email: "test2@test.com",
-    password: "12345678",
-    name: "TEST2"
-  },
-  {
-    email: "juanfe",
-    password: "123",
-    name: "TEST2"
-  }
-
-];
-
 export const AuthContext = createContext({} as AuthContextProps);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  // 🔹 Cargar sesión inicial al abrir la app
+  useEffect(() => {
+    const getSession = async () => {
+      setIsLoading(true);
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        setUser(data.session.user);
+      }
+      setIsLoading(false);
+    };
+    getSession();
+
+    // 🔹 Escuchar cambios en la sesión (login/logout)
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => {
+      listener.subscription.unsubscribe();
+    };
+  }, []);
+
+  // 🔹 Login con Supabase
   const login = async (email: string, password: string) => {
     setIsLoading(true);
-    try {
-      // Buscar usuario en fakeDataSource
-      const foundUser = fakeDataSource.find(
-        (u) => u.email === email && u.password === password
-      );
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    setIsLoading(false);
 
-      if (!foundUser) {
-        throw new Error("Credenciales incorrectas");
-      }
-
-      setUser(foundUser); // guardar usuario en el contexto
-    } finally {
-      setIsLoading(false);
-    }
+    if (error) throw new Error(error.message);
+    setUser(data.user);
   };
 
+  // 🔹 Logout
   const logout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) throw new Error(error.message);
     setUser(null);
   };
 
+  // 🔹 Registro de usuario
   const register = async (email: string, password: string) => {
-    // Ejemplo simple: agregar a fakeDataSource
-    fakeDataSource.push({ email, password, name: email.split("@")[0] });
+    setIsLoading(true);
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+    });
+    setIsLoading(false);
+
+    if (error) throw new Error(error.message);
+    setUser(data.user);
   };
 
   return (

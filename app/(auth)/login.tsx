@@ -15,9 +15,13 @@ export default function Login() {
       await login(email, password);
       console.log("✅ Login correcto");
       router.push('/main/(tabs)/home');
-    } catch (error: any) {
+    } catch (error) { // Eliminamos ": any" para un manejo de errores más seguro
       console.log("❌ Error en login:", error);
-      Alert.alert("Error", error.message || "Correo o contraseña incorrectos");
+      if (error instanceof Error) {
+        Alert.alert("Error", error.message);
+      } else {
+        Alert.alert("Error", "Ocurrió un error inesperado.");
+      }
     }
   };
 
