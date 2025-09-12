@@ -23,7 +23,13 @@ const fakeDataSource = [
     email: "test2@test.com",
     password: "12345678",
     name: "TEST2"
+  },
+  {
+    email: "juanfe",
+    password: "123",
+    name: "TEST2"
   }
+
 ];
 
 export const AuthContext = createContext({} as AuthContextProps);
