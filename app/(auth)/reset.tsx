@@ -1,46 +1,84 @@
+import { supabase } from "@/utils/supabase";
 import { useRouter } from 'expo-router';
-import { Image, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useState } from 'react';
+import { Alert, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function Reset() {
   const router = useRouter();
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleReset = async () => {
+    if (password !== confirm) {
+      Alert.alert("Error", "Passwords do not match");
+      return;
+    }
+
+    setLoading(true);
+    const { error } = await supabase.auth.updateUser({ password });
+    setLoading(false);
+
+    if (error) {
+      Alert.alert("Error", error.message);
+    } else {
+      Alert.alert("Success", "Password updated successfully!");
+      router.push("/(auth)/login");
+    }
+  };
 
   return (
     <View style={styles.container}>
-    
+      {/* Figuras decorativas */}
       <View style={styles.circleTopLeft} />
       <View style={styles.circleBottomRight} />
       <View style={styles.squareTopRight} />
       <View style={styles.squareBottomLeft} />
       <View style={styles.triangleCenter} />
 
-      <Image source={require('../../assets/images/logo.png')} style={styles.logo} />
+      {/* Logo */}
+      <Image
+        source={require("../../assets/images/logo.png")}
+        style={styles.logo}
+      />
 
       <Text style={styles.text}>Reset your password</Text>
 
       <TextInput
         style={styles.input}
-        placeholder="new password"
+        placeholder="New password"
         placeholderTextColor="#888"
-        autoCapitalize="none"
-        autoCorrect={false}
+        secureTextEntry
+        value={password}
+        onChangeText={setPassword}
       />
 
       <TextInput
         style={styles.input}
-        placeholder="repeat new password"
+        placeholder="Repeat new password"
         placeholderTextColor="#888"
-        secureTextEntry={true}
+        secureTextEntry
+        value={confirm}
+        onChangeText={setConfirm}
       />
 
-      <TouchableOpacity style={styles.button} onPress={() => console.log('Change password pressed')}>
-        <Text style={styles.buttonText}>Change password</Text>
+      <TouchableOpacity style={styles.button} onPress={handleReset} disabled={loading}>
+        <Text style={styles.buttonText}>
+          {loading ? "Changing..." : "Change password"}
+        </Text>
       </TouchableOpacity>
 
-      <Pressable onPress={() => router.push('/(auth)/login')}>
-        <Text style={{ color: '#0072f5ff', marginTop: 20, textDecorationLine: 'underline' }}>
-          Go to home?
+      {/*<Pressable onPress={() => router.push("/(auth)/login")}>
+        <Text
+          style={{
+            color: "#0072f5ff",
+            marginTop: 20,
+            textDecorationLine: "underline",
+          }}
+        >
+          Back to login
         </Text>
-      </Pressable>
+      </Pressable>*/}
     </View>
   );
 }

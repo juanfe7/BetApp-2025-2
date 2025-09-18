@@ -1,20 +1,29 @@
+import { AuthContext } from "@/contexts/AuthContext";
 import { MaterialIcons } from "@expo/vector-icons";
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useRouter } from "expo-router";
+import { useContext } from "react";
+import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+
 
 export default function Profile() {
+  const router = useRouter();
+  const { user } = useContext(AuthContext); // 👈 Obtenemos el usuario del contexto
+
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container}>
       {/* Header con logo */}
       <View style={styles.header}>
         <Image
-        source={{ uri: "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png" }} // Puedes cambiarlo por la foto del usuario
-        style={styles.avatar}
+          source={{
+            uri: user?.avatar_url || "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png",
+          }}
+          style={styles.avatar}
         />
-        <Text style={styles.appName}>Juan Felipe</Text>
-        <Text style={styles.userId}>ID: 12345678</Text>
+        <Text style={styles.appName}>{user?.name || user?.username}</Text>
+        <Text style={styles.userId}>ID: {user?.id}</Text>
       </View>
 
-      {/* Balance */}
+      {/* Balance (ejemplo, aún fijo) */}
       <View style={styles.balanceCard}>
         <Text style={styles.balanceLabel}>Available balance</Text>
         <Text style={styles.balanceValue}>$ 250.000</Text>
@@ -32,7 +41,7 @@ export default function Profile() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Your account</Text>
         <View style={styles.grid}>
-          <TouchableOpacity style={styles.gridItem}>
+          <TouchableOpacity style={styles.gridItem} onPress={() => router.push('/main/editProfile')}>
             <MaterialIcons name="person" size={24} color="#0072f5ff" />
             <Text style={styles.gridText}>Personal info</Text>
           </TouchableOpacity>
@@ -50,7 +59,7 @@ export default function Profile() {
           </TouchableOpacity>
         </View>
       </View>
-    </View>
+    </ScrollView>
   );
 }
 

@@ -1,82 +1,63 @@
-import { supabase } from '@/utils/supabase'; // 👈 importa supabase
-import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { Tabs, useRouter } from 'expo-router';
-import { Alert, StyleSheet, TouchableOpacity } from 'react-native';
+import { supabase } from "@/utils/supabase";
+import { useRouter } from 'expo-router';
+import { useState } from "react";
+import { Alert, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
-export default function TabLayout() {
+
+export default function ForgotPassword() {
   const router = useRouter();
+  
+  const [email, setEmail] = useState("");
 
-  const handleSignOut = async () => {
-    // Cerrar sesión en supabase
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      console.error("Error signing out:", error.message);
-      return;
-    }
+  const handleSendReset = async () => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: "betapp://reset", // 👈 cambia esto a la URL de tu app
+    });
 
-    // Aquí puedes limpiar cualquier token/estado adicional que uses
-    // Ejemplo si guardaste cosas en AsyncStorage:
-    // await AsyncStorage.removeItem("user");
+    if (error) Alert.alert("Error", error.message);
+    else Alert.alert("Check your email", "We sent you a reset link.");
 
-    // Redirigir al login
-    Alert.alert("Sesión finalizada", "Has cerrado sesión correctamente.", [
-      {
-        text: "OK",
-        onPress: () => router.replace('/(auth)/login'),
-      }
-    ]);
+    router.push("/(auth)/reset");
+
   };
 
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: '#0072f5ff',
-        tabBarInactiveTintColor: '#ffffff',
-        tabBarStyle: {
-          backgroundColor: '#040913ff',
-          borderTopColor: '#0072f5ff',
-          borderTopWidth: 2,
-        },
-        headerStyle: { backgroundColor: "#040913" },
-        headerTintColor: "#fff",
-        headerTitleStyle: { fontWeight: "bold" },
-      }}
-    >
-      <Tabs.Screen
-        name="home"
-        options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => (
-            <FontAwesome size={24} name="home" color={color} />
-          ),
-          headerRight: () => (
-            <TouchableOpacity onPress={handleSignOut}>
-              <FontAwesome name="sign-out" size={22} color="#0072f5" />
-            </TouchableOpacity>
-          ),
-        }}
+    <View style={styles.container}>
+      {/* Figuras decorativas */}
+      <View style={styles.circleTopLeft} />
+      <View style={styles.circleBottomRight} />
+      <View style={styles.squareTopRight} />
+      <View style={styles.squareBottomLeft} />
+      <View style={styles.triangleCenter} />
+
+      {/* Logo */}
+      <Image
+        source={require("../../assets/images/logo.png")}
+        style={styles.logo}
       />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: 'Profile',
-          tabBarIcon: ({ color }) => (
-            <FontAwesome size={24} name="user" color={color} />
-          ),
-          headerRight: () => (
-            <TouchableOpacity onPress={handleSignOut}>
-              <FontAwesome name="sign-out" size={22} color="#0072f5" />
-            </TouchableOpacity>
-          ),
-        }}
+
+      <Text style={styles.text}>Reset your password</Text>
+    
+      <TextInput
+        style={styles.input}
+        placeholder="Email"
+        onChangeText={setEmail}
+        value={email}
+        autoCapitalize="none"
       />
-    </Tabs>
+
+      <TouchableOpacity style={styles.loginbutton} onPress={handleSendReset}>
+        <Text style={styles.buttonText}>Send reset link</Text>
+      </TouchableOpacity>
+    </View>
   );
 }
 
 
+
+
 const styles = StyleSheet.create({
-  container: {
+    container: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',

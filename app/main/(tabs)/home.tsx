@@ -1,17 +1,27 @@
+import { AuthContext } from "@/contexts/AuthContext"; // 👈 importa el contexto
 import { FontAwesome5 } from "@expo/vector-icons";
+import { useContext } from "react";
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 
 export default function Home() {
+  const { user } = useContext(AuthContext); // 👈 obtenemos el usuario del contexto
+
   return (
     <ScrollView style={styles.container}>
       {/* Header */}
       <Text style={styles.greeting}>Hello,</Text>
-      <Text style={styles.username}>Juan Felipe</Text>
+      <Text style={styles.username}>
+        {user?.name || user?.username || "User"}
+      </Text>
 
       {/* Search */}
       <View style={styles.searchBox}>
         <FontAwesome5 name="search" size={18} color="#aaa" style={{ marginRight: 8 }} />
-        <TextInput placeholder="Search events, teams" placeholderTextColor="#aaa" style={styles.searchInput} />
+        <TextInput
+          placeholder="Search events, teams"
+          placeholderTextColor="#aaa"
+          style={styles.searchInput}
+        />
       </View>
 
       {/* Torneos */}
@@ -52,6 +62,7 @@ export default function Home() {
     </ScrollView>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: {

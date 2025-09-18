@@ -65,7 +65,7 @@ export default function Login() {
         <Text style={styles.buttonText}>SIGN UP</Text>
       </TouchableOpacity>
 
-      <Pressable onPress={() => router.push('/(auth)/reset')}>
+      <Pressable onPress={() => router.push('/(auth)/forgotPassword')}>
         <Text style={{ color: '#0072f5ff', marginTop: 20, textDecorationLine: 'underline' }}>
           Forgot your password?
         </Text>
