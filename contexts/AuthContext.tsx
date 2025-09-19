@@ -9,6 +9,7 @@ interface AuthContextProps {
   register: (email: string, password: string) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   updateProfile?: (profileData: Partial<any>) => Promise<boolean>;
+  setUser: React.Dispatch<React.SetStateAction<any>>;
 }
 
 export const AuthContext = createContext({} as AuthContextProps);
@@ -179,6 +180,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         register,
         resetPassword,
         updateProfile,
+        setUser,
       }}
     >
       {children}
