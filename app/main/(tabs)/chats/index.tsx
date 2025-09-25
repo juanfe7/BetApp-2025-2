@@ -2,7 +2,15 @@ import { getOrCreateChat } from "@/utils/chat";
 import { supabase } from "@/utils/supabase";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { Button, FlatList, Text, TextInput, TouchableOpacity, View } from "react-native";
+import {
+  Button,
+  FlatList,
+  Image,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 export default function ChatsScreen() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -25,8 +33,8 @@ export default function ChatsScreen() {
 
     const { data, error } = await supabase
       .from("profiles")
-      .select("id, email")
-      .ilike("email", searchEmail.trim()); // case-insensitive
+      .select("id, email, avatar_url")
+      .ilike("email", searchEmail.trim());
 
     if (error) {
       console.error("Error buscando usuario:", error.message);
@@ -36,15 +44,13 @@ export default function ChatsScreen() {
     setSearchResult(data && data.length > 0 ? data[0] : null);
   };
 
-  // 🟢 iniciar chat con el usuario encontrado
+  // 🟢 iniciar chat
   const handleStartChat = async () => {
-  if (!currentUserId || !searchResult) return;
+    if (!currentUserId || !searchResult) return;
 
     try {
       const chat = await getOrCreateChat(currentUserId, searchResult.id);
-      console.log("Navegando a chat:", chat.id);
       if (chat?.id) {
-        console.log("Navegando a chat:", chat.id);
         router.push({
           pathname: "/main/(tabs)/chats/[chatId]",
           params: { chatId: chat.id },
@@ -55,8 +61,7 @@ export default function ChatsScreen() {
     }
   };
 
-
-  // 📥 traer lista de chats del usuario
+  // 📥 traer lista de chats con avatar
   useEffect(() => {
     if (!currentUserId) return;
 
@@ -68,8 +73,8 @@ export default function ChatsScreen() {
           user_id,
           user_id2,
           created_at,
-          user1:profiles!chats_user_id_fkey(id, email),
-          user2:profiles!chats_user_id2_fkey(id, email)
+          user1:profiles!chats_user_id_fkey(id, email, avatar_url),
+          user2:profiles!chats_user_id2_fkey(id, email, avatar_url)
         `)
         .or(`user_id.eq.${currentUserId},user_id2.eq.${currentUserId}`)
         .order("created_at", { ascending: false });
@@ -79,7 +84,6 @@ export default function ChatsScreen() {
 
     fetchChats();
 
-    // 👇 suscripción realtime
     const channel = supabase
       .channel("chats-changes")
       .on(
@@ -101,7 +105,6 @@ export default function ChatsScreen() {
       supabase.removeChannel(channel);
     };
   }, [currentUserId]);
-
 
   return (
     <View style={{ flex: 1, padding: 16, backgroundColor: "#040913" }}>
@@ -144,7 +147,7 @@ export default function ChatsScreen() {
         <Text style={{ color: "gray", marginBottom: 16 }}>No encontrado</Text>
       ) : null}
 
-      {/* lista de chats existentes */}
+      {/* lista de chats */}
       <FlatList
         data={chats}
         keyExtractor={(item) => item.id}
@@ -174,26 +177,40 @@ export default function ChatsScreen() {
                 elevation: 3,
               }}
             >
-              {/* Avatar circular */}
-              <View
-                style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 20,
-                  backgroundColor: "#334155",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  marginRight: 12,
-                }}
-              >
-                <Text style={{ color: "white", fontWeight: "bold" }}>
-                  {otherUser?.email?.[0]?.toUpperCase() || "?"}
-                </Text>
-              </View>
+              {/* Avatar circular con imagen */}
+              {otherUser?.avatar_url ? (
+                <Image
+                  source={{ uri: otherUser.avatar_url }}
+                  style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: 22,
+                    marginRight: 12,
+                  }}
+                />
+              ) : (
+                <View
+                  style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: 22,
+                    backgroundColor: "#334155",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    marginRight: 12,
+                  }}
+                >
+                  <Text style={{ color: "white", fontWeight: "bold" }}>
+                    {otherUser?.email?.[0]?.toUpperCase() || "?"}
+                  </Text>
+                </View>
+              )}
 
               {/* Info de chat */}
               <View style={{ flex: 1 }}>
-                <Text style={{ color: "white", fontWeight: "600", fontSize: 16 }}>
+                <Text
+                  style={{ color: "white", fontWeight: "600", fontSize: 16 }}
+                >
                   {otherUser?.email || "Usuario"}
                 </Text>
                 <Text style={{ color: "#94a3b8", fontSize: 13 }}>
@@ -204,7 +221,6 @@ export default function ChatsScreen() {
           );
         }}
       />
-
     </View>
   );
 }
