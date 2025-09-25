@@ -1,17 +1,22 @@
 import { AuthContext } from "@/contexts/AuthContext";
 import { supabase } from '@/utils/supabase';
 import { CameraType, useCameraPermissions } from 'expo-camera';
+import * as FileSystem from "expo-file-system/legacy";
 import * as ImagePicker from 'expo-image-picker';
 import { router } from "expo-router";
 import { useContext, useState } from "react";
-import { Alert, Button, Image, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Alert, Button, Image, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+
+
+
 
 export default function EditProfile() {
   const { user, setUser } = useContext(AuthContext);
-  const [name, setName] = useState(user?.name || "");
-  const [avatarUrl, setAvatarUrl] = useState(user?.avatar_url || "");
-  const [bio, setBio] = useState(user?.bio || "");
-  const [lastName, setLastName] = useState(user?.lastName || "");
+  const [name, setName] = useState("");
+  const defaultAvatar = "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png";
+  const [avatarUrl, setAvatarUrl] = useState(user?.avatar_url || defaultAvatar);
+  const [bio, setBio] = useState("");
+  const [lastName, setLastName] = useState("");
   const [modalVisible, setModalVisible] = useState(false);
   const [facing, setFacing] = useState<CameraType>('back');
   const [permission, requestPermission] = useCameraPermissions();
@@ -66,31 +71,35 @@ export default function EditProfile() {
     setModalVisible(false);
   };
 
-    const uploadImage = async (uri: string) => {
-      if (!uri) return;
 
-      const response = await fetch(uri);
-      const arrayBuffer = await response.arrayBuffer();
+  const uploadImage = async (uri: string) => {
+    if (!uri) return;
 
-      const fileExtension = uri.split('.').pop() || "jpg";
-      const fileName = `${user.id}/avatar.${fileExtension}`; // 👈 carpeta por usuario
+    const base64 = await FileSystem.readAsStringAsync(uri, {
+      encoding: "base64",
+    });
 
-      const { data, error } = await supabase.storage
-        .from("avatars")
-        .upload(fileName, arrayBuffer, {
-          contentType: `image/${fileExtension}`,
-          cacheControl: "3600",
-          upsert: false, // opcional: reemplaza si ya existe
-        });
+    const fileExtension = uri.split(".").pop() || "jpg";
+    const uniqueFileName = `${generateUniqueName()}.${fileExtension}`;
 
-      if (error) {
-        console.error("Error uploading image:", error);
-        return null;
-      }
+    const arrayBuffer = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+
+    const { data, error } = await supabase.storage
+      .from("avatars")
+      .upload(`public/${uniqueFileName}`, arrayBuffer, {
+        contentType: `image/${fileExtension}`,
+        cacheControl: "3600",
+        upsert: false, // mejor no reemplazar en este caso
+      });
+
+    if (error) {
+      console.error("Error uploading image:", error);
+      return null;
+    }
 
     const { data: publicUrlData } = supabase.storage
       .from("avatars")
-      .getPublicUrl(fileName);
+      .getPublicUrl(`public/${uniqueFileName}`);
 
     return publicUrlData.publicUrl;
   };
@@ -101,7 +110,7 @@ export default function EditProfile() {
   const handleSave = async () => {
     if (!user) return;
 
-    let newAvatarUrl = avatarUrl;
+    let newAvatarUrl = avatarUrl || defaultAvatar;
     if (avatarUrl && avatarUrl.startsWith('file://')) {
         newAvatarUrl = await uploadImage(avatarUrl);
         if (!newAvatarUrl) {
@@ -132,74 +141,95 @@ export default function EditProfile() {
       Alert.alert("Éxito", "Perfil actualizado");
       router.push('/main/(tabs)/profile');
     }
+
   };
+  
+
+  // función para generar un id único tipo uuid
+  const generateUniqueName = () =>
+    `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+
 
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Editar perfil</Text>
-      <Image
-        source={{
-          uri: avatarUrl || "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png",
-        }}
-        style={styles.avatar}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="URL de imagen"
-        placeholderTextColor="#aaa"
-        value={avatarUrl}
-        onChangeText={setAvatarUrl}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Nombres"
-        placeholderTextColor="#aaa"
-        value={name}
-        onChangeText={setName}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Apellidos"
-        placeholderTextColor="#aaa"
-        value={lastName}
-        onChangeText={setLastName}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="bio"
-        placeholderTextColor="#aaa"
-        value={bio}
-        onChangeText={setBio}
-      />
-      <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-        <Text style={styles.saveText}>Guardar cambios</Text>
-      </TouchableOpacity>
-
-      
-      {/* Botón para abrir el modal */}
-      <TouchableOpacity onPress={() => setModalVisible(true)}>
-          <Text style={{ color: '#0072f5ff', textAlign: 'center', marginTop: 10 }}>Change Photo</Text>
-      </TouchableOpacity>
-
-      {/* Modal para elegir la fuente de la foto */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={() => setModalVisible(!modalVisible)}
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
+      <ScrollView
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Choose a photo</Text>
-            <Button title="Take Photo" onPress={handleTakePhoto} />
-            <Button title="Choose from Library" onPress={handleChoosePhoto} />
-            <Button title="Cancel" onPress={() => setModalVisible(false)} />
+        <Text style={styles.title}>Editar perfil</Text>
+
+        <Image
+          source={{ uri: avatarUrl }}
+          style={styles.avatar}
+        />
+        
+
+        <TextInput
+          style={styles.input}
+          placeholder="Nombres"
+          placeholderTextColor="#aaa"
+          value={name}
+          onChangeText={setName}
+        />
+
+        <TextInput
+          style={styles.input}
+          placeholder="Apellidos"
+          placeholderTextColor="#aaa"
+          value={lastName}
+          onChangeText={setLastName}
+        />
+
+        <TextInput
+          style={styles.input}
+          placeholder="Bio"
+          placeholderTextColor="#aaa"
+          value={bio}
+          onChangeText={setBio}
+        />
+
+        <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+          <Text style={styles.saveText}>Guardar cambios</Text>
+        </TouchableOpacity>
+
+        {/* Botón para abrir el modal */}
+        <TouchableOpacity onPress={() => setModalVisible(true)}>
+          <Text
+            style={{
+              color: "#0072f5ff",
+              textAlign: "center",
+              marginTop: 10,
+            }}
+          >
+            Change Photo
+          </Text>
+        </TouchableOpacity>
+
+        {/* Modal para elegir la fuente de la foto */}
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={modalVisible}
+          onRequestClose={() => setModalVisible(!modalVisible)}
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Choose a photo</Text>
+              <Button title="Take Photo" onPress={handleTakePhoto} />
+              <Button title="Choose from Library" onPress={handleChoosePhoto} />
+              <Button title="Cancel" onPress={() => setModalVisible(false)} />
+            </View>
           </View>
-        </View>
-      </Modal>
-    </View> );
+        </Modal>
+      </ScrollView>
+    </KeyboardAvoidingView>
+  );
 }
+
 
 const styles = StyleSheet.create({
   container: {
