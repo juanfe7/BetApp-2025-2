@@ -1,40 +1,35 @@
 import { supabase } from "./supabase";
 
 // Crear o traer un chat existente entre dos usuarios
-export async function getOrCreateChat(userId1: string, userId2: string) {
-  // 📌 asegurar siempre el mismo orden para evitar duplicados
-  const [a, b] = [userId1, userId2].sort();
-
-  // 1️⃣ verificar si ya existe un chat entre ambos
-  const { data: existingChats, error: findError } = await supabase
+export const getOrCreateChat = async (currentUserId: string, otherUserId: string) => {
+  // verificar si ya existe
+  const { data: existingChat } = await supabase
     .from("chats")
-    .select("*")
-    .or(`and(user_id.eq.${a},user_id2.eq.${b}),and(user_id.eq.${b},user_id2.eq.${a})`)
-    .limit(1);
+    .select(`
+      id,
+      user_id,
+      user_id2,
+      user1:profiles!chats_user_id_fkey(id, email, avatar_url),
+      user2:profiles!chats_user_id2_fkey(id, email, avatar_url)
+    `)
+    .or(`and(user_id.eq.${currentUserId},user_id2.eq.${otherUserId}),and(user_id.eq.${otherUserId},user_id2.eq.${currentUserId})`)
+    .maybeSingle();
 
-  if (findError) {
-    console.error("Error buscando chat:", findError.message);
-    return null;
-  }
+  if (existingChat) return existingChat;
 
-  if (existingChats && existingChats.length > 0) {
-    return existingChats[0]; // ya existe
-  }
-
-  // 2️⃣ si no existe, crearlo
-  const { data, error: insertError } = await supabase
+  // crear chat nuevo
+  const { data, error } = await supabase
     .from("chats")
-    .insert({
-      user_id: a,
-      user_id2: b,
-    })
-    .select()
+    .insert([{ user_id: currentUserId, user_id2: otherUserId }])
+    .select(`
+      id,
+      user_id,
+      user_id2,
+      user1:profiles!chats_user_id_fkey(id, email, avatar_url),
+      user2:profiles!chats_user_id2_fkey(id, email, avatar_url)
+    `)
     .single();
 
-  if (insertError) {
-    console.error("Error creando chat:", insertError.message);
-    return null;
-  }
-
+  if (error) throw error;
   return data;
-}
+};

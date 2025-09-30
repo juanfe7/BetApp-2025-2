@@ -89,13 +89,24 @@ export default function ChatsScreen() {
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "chats" },
-        (payload) => {
-          const newChat = payload.new;
-          if (
-            newChat.user_id === currentUserId ||
-            newChat.user_id2 === currentUserId
-          ) {
-            setChats((prev) => [newChat, ...prev]);
+        async (payload) => {
+          const newChatId = payload.new.id;
+
+          const { data: chatWithUsers } = await supabase
+            .from("chats")
+            .select(`
+              id,
+              user_id,
+              user_id2,
+              created_at,
+              user1:profiles!chats_user_id_fkey(id, email, avatar_url),
+              user2:profiles!chats_user_id2_fkey(id, email, avatar_url)
+            `)
+            .eq("id", newChatId)
+            .single();
+
+          if (chatWithUsers) {
+            setChats((prev) => [chatWithUsers, ...prev]);
           }
         }
       )
