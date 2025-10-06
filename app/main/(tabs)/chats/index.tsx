@@ -124,7 +124,7 @@ export default function ChatsScreen() {
         <TextInput
           value={searchEmail}
           onChangeText={setSearchEmail}
-          placeholder="Buscar usuario por email..."
+          placeholder="Search user by email..."
           placeholderTextColor="#aaa"
           style={{
             flex: 1,
@@ -135,7 +135,7 @@ export default function ChatsScreen() {
             color: "white",
           }}
         />
-        <Button title="Buscar" onPress={handleSearch} />
+        <Button title="Search" onPress={handleSearch} />
       </View>
 
       {/* resultado de búsqueda */}
@@ -150,12 +150,12 @@ export default function ChatsScreen() {
           }}
         >
           <Text style={{ color: "white", marginBottom: 8 }}>
-            Usuario encontrado: {searchResult.email}
+            User found: {searchResult.email}
           </Text>
           <Button title="Iniciar chat" onPress={handleStartChat} />
         </View>
       ) : searchEmail ? (
-        <Text style={{ color: "gray", marginBottom: 16 }}>No encontrado</Text>
+        <Text style={{ color: "gray", marginBottom: 16 }}>No found</Text>
       ) : null}
 
       {/* lista de chats */}
@@ -222,10 +222,10 @@ export default function ChatsScreen() {
                 <Text
                   style={{ color: "white", fontWeight: "600", fontSize: 16 }}
                 >
-                  {otherUser?.email || "Usuario"}
+                  {otherUser?.email || "User"}
                 </Text>
                 <Text style={{ color: "#94a3b8", fontSize: 13 }}>
-                  Último mensaje...
+                  Last message...
                 </Text>
               </View>
             </TouchableOpacity>
