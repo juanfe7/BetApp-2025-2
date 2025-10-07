@@ -49,12 +49,18 @@ export default function TabLayout() {
           ),
         }}
       />
+
       <Tabs.Screen
-        name="profile"
+        name="reels"
         options={{
-          title: 'Profile',
-          tabBarIcon: ({ color }) => (
-            <FontAwesome size={24} name="user" color={color} />
+          title: "Reels",
+          headerShown: true,
+          tabBarIcon: ({ color, focused }) => (
+            <FontAwesome
+              name="play-circle"
+              size={focused ? 30 : 26}
+              color={focused ? "#0072f5" : color}
+            />
           ),
           headerRight: () => (
             <TouchableOpacity onPress={handleSignOut}>
@@ -63,6 +69,7 @@ export default function TabLayout() {
           ),
         }}
       />
+
       <Tabs.Screen
         name="chats"
         options={{
@@ -70,6 +77,21 @@ export default function TabLayout() {
           headerShown: false,
           tabBarIcon: ({ color }) => (
             <FontAwesome size={24} name="comments" color={color} />
+          ),
+          headerRight: () => (
+            <TouchableOpacity onPress={handleSignOut}>
+              <FontAwesome name="sign-out" size={22} color="#0072f5" />
+            </TouchableOpacity>
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profile',
+          tabBarIcon: ({ color }) => (
+            <FontAwesome size={24} name="user" color={color} />
           ),
           headerRight: () => (
             <TouchableOpacity onPress={handleSignOut}>
