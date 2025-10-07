@@ -18,72 +18,101 @@ export default function Home() {
   const [bets, setBets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 👇 Cargar apuestas activas
+  // 🔹 fetchBets con conteo de favoritas
   const fetchBets = async () => {
     setLoading(true);
 
-    // Traer solo apuestas activas
+    // Traer apuestas activas
     const { data: betsData, error: betsError } = await supabase
       .from("bets")
       .select("*")
-      .eq("status", "active") // 👈 solo activas
+      .eq("status", "active")
       .order("created_at", { ascending: false });
 
-    if (betsError) {
-      console.error("Error fetching bets:", betsError.message);
-      setLoading(false);
-      return;
-    }
+    if (betsError) { console.error(betsError); setLoading(false); return; }
 
     // Traer opciones
     const { data: optionsData, error: optionsError } = await supabase
       .from("bet_options")
       .select("*");
 
-    if (optionsError) {
-      console.error("Error fetching bet options:", optionsError.message);
-      setLoading(false);
-      return;
-    }
+    if (optionsError) { console.error(optionsError); setLoading(false); return; }
 
-    // Unir apuestas con sus opciones
-    const betsWithOptions = betsData.map((bet) => ({
+    // Traer todas las favoritas
+    const { data: favoritesData, error: favoritesError } = await supabase
+      .from("favorites")
+      .select("user_id, bet_id");
+
+    if (favoritesError) { console.error(favoritesError); setLoading(false); return; }
+
+    const favoriteIdsUser = favoritesData?.filter(f => f.user_id === user?.id).map(f => f.bet_id) || [];
+
+    // Conteo de favoritos por apuesta
+    const favoritesCountMap: Record<string, number> = {};
+    favoritesData?.forEach(f => {
+      const id = f.bet_id;
+      favoritesCountMap[id] = (favoritesCountMap[id] || 0) + 1;
+    });
+
+    const betsWithOptions = betsData.map(bet => ({
       ...bet,
-      bet_options: optionsData.filter((opt) => opt.bet_id === bet.id),
+      bet_options: optionsData.filter(opt => opt.bet_id === bet.id),
+      isFavorite: favoriteIdsUser.includes(bet.id),
+      favoritesCount: favoritesCountMap[bet.id] || 0,
     }));
 
     setBets(betsWithOptions);
     setLoading(false);
   };
 
-  useEffect(() => {
-    fetchBets();
 
-    // 👇 Suscripción a realtime en tabla bets
+  // Marcar/desmarcar favorita
+  const toggleFavorite = async (betId: string) => {
+    if (!user) return;
+
+    const { data: existing } = await supabase
+      .from("favorites")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("bet_id", betId)
+      .single();
+
+    if (existing) {
+      await supabase.from("favorites").delete().eq("id", existing.id);
+    } else {
+      await supabase.from("favorites").insert({ user_id: user.id, bet_id: betId });
+    }
+
+    fetchBets();
+  };
+
+  useEffect(() => {
+    const loadBets = async () => {
+      await fetchBets();
+    };
+
+    loadBets();
+
     const channel = supabase
       .channel("realtime-bets")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "bets" },
-        () => {
-          fetchBets(); // refrescar apuestas
-        }
+        () => loadBets()
       )
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel); // limpiar al desmontar
+      supabase.removeChannel(channel);
     };
   }, []);
 
-  // 👇 Saludo dinámico
   const displayName =
     user?.name || user?.username || user?.email?.split("@")[0] || "User";
 
   return (
     <View style={styles.container}>
-      {/* 👇 Saludo arriba */}
-      <Text style={styles.greeting}>Hello, {displayName} </Text>
+      <Text style={styles.greeting}>Hello, {displayName}</Text>
       <Text style={styles.title}>Available bets</Text>
 
       {loading ? (
@@ -96,21 +125,40 @@ export default function Home() {
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
             <View style={styles.betCard}>
-              {/* Imagen si existe */}
-              {item.image_url && (
-                <Image
-                  source={{ uri: item.image_url }}
-                  style={styles.betImage}
-                  resizeMode="cover"
-                />
-              )}
+              <View style={{ position: "relative" }}>
+                {item.image_url && (
+                  <Image
+                    source={{ uri: item.image_url }}
+                    style={styles.betImage}
+                    resizeMode="cover"
+                  />
+                )}
+
+                <TouchableOpacity
+                  style={[
+                    styles.favoriteCircle,
+                    { backgroundColor: item.isFavorite ? "#df0c0cff" : "#007AFF" },
+                  ]}
+                  onPress={() => toggleFavorite(item.id)}
+                >
+                  <Text style={styles.favoriteStar}>
+                    {item.isFavorite ? "★" : "☆"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
 
               <Text style={styles.betTitle}>{item.title}</Text>
+
+              {/* Mostrar conteo de favoritas solo para admins */}
+              {user?.role === "ADMIN" && (
+                <Text style={styles.favoritesCount}>
+                  ⭐ Favorited by {item.favoritesCount} user{item.favoritesCount !== 1 ? "s" : ""}
+                </Text>
+              )}
+
               <Text style={styles.betDesc}>{item.description}</Text>
 
-              {/* 👇 Renderizado diferente según rol */}
               {user?.role === "ADMIN" ? (
-                // ADMIN → un solo botón para manejar apuesta completa
                 <TouchableOpacity
                   style={[styles.optionButton, { backgroundColor: "#ff9500" }]}
                   onPress={() =>
@@ -123,38 +171,30 @@ export default function Home() {
                   <Text style={styles.optionText}>⚙ Manage bet</Text>
                 </TouchableOpacity>
               ) : (
-                // CLIENT → botones por opción
-                item.bet_options?.length > 0 ? (
-                  <View style={{ marginTop: 10 }}>
-                    {item.bet_options.map((opt: any) => (
-                      <TouchableOpacity
-                        key={opt.id}
-                        style={styles.optionButton}
-                        onPress={() =>
-                          router.push({
-                            pathname: "/main/betDetail",
-                            params: { betId: item.id, optionId: opt.id },
-                          })
-                        }
-                      >
-                        <Text style={styles.optionText}>
-                          {opt.label} (fee: {opt.odds})
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                ) : (
-                  <Text style={{ color: "#aaa", marginTop: 8 }}>
-                    No options available
-                  </Text>
-                )
+                <View style={{ marginTop: 10 }}>
+                  {item.bet_options?.map((opt: any) => (
+                    <TouchableOpacity
+                      key={opt.id}
+                      style={styles.optionButton}
+                      onPress={() =>
+                        router.push({
+                          pathname: "/main/betDetail",
+                          params: { betId: item.id, optionId: opt.id },
+                        })
+                      }
+                    >
+                      <Text style={styles.optionText}>
+                        {opt.label} (fee: {opt.odds})
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
               )}
             </View>
           )}
         />
       )}
 
-      {/* Botón Crear Apuesta (solo ADMIN) */}
       {user?.role === "ADMIN" && (
         <TouchableOpacity
           style={styles.createBetButton}
@@ -180,8 +220,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#007AFF",
   },
-  betTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 5, color: "#fff" },
-  betDesc: { fontSize: 14, color: "#ccc" },
+  betTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 2, color: "#fff" },
+  favoritesCount: { fontSize: 14, color: "#ffd700", marginBottom: 5 },
+  betDesc: { fontSize: 14, color: "#ccc", marginBottom: 8 },
   createBetButton: {
     backgroundColor: "#007AFF",
     padding: 15,
@@ -205,6 +246,26 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 14,
     textAlign: "center",
+    fontWeight: "bold",
+  },
+  favoriteCircle: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+    elevation: 5,
+  },
+  favoriteStar: {
+    color: "#fff",
+    fontSize: 16,
     fontWeight: "bold",
   },
 });

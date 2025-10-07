@@ -139,17 +139,24 @@ export default function Profile() {
             <MaterialIcons name="person" size={24} color="#0072f5ff" />
             <Text style={styles.gridText}>Personal info</Text>
           </TouchableOpacity>
+
           <TouchableOpacity style={styles.gridItem}>
             <MaterialIcons name="security" size={24} color="#0072f5ff" />
             <Text style={styles.gridText}>Security</Text>
           </TouchableOpacity>
+
           <TouchableOpacity style={styles.gridItem}>
             <MaterialIcons name="notifications" size={24} color="#0072f5ff" />
             <Text style={styles.gridText}>Notifications</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.gridItem}>
-            <MaterialIcons name="support-agent" size={24} color="#0072f5ff" />
-            <Text style={styles.gridText}>Support</Text>
+
+          {/* 🔹 Reemplazamos Support por Favorites */}
+          <TouchableOpacity
+            style={styles.gridItem}
+            onPress={() => router.push("/main/favoriteBets")}
+          >
+            <MaterialIcons name="star" size={24} color="#0072f5ff" />
+            <Text style={styles.gridText}>Favorites</Text>
           </TouchableOpacity>
         </View>
       </View>

@@ -5,14 +5,14 @@ import { ResizeMode, Video } from "expo-av";
 import * as ImagePicker from "expo-image-picker";
 import React, { useEffect, useRef, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 import LottieView from 'lottie-react-native';
